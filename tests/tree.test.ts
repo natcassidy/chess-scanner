@@ -94,3 +94,32 @@ describe('scan decoding', () => {
     expect(looksRotated(boardFenToPlacement(START))).toBe(false);
   });
 });
+
+describe('count priors', () => {
+  const mk = (best: string, pBest: number, second: string) => {
+    const a = new Float32Array(13).fill(0.001);
+    a[CLASSES.indexOf(best as never)] = pBest;
+    a[CLASSES.indexOf(second as never)] = 1 - pBest - 0.011;
+    return a;
+  };
+  it('turns unsure extra bishops back into pawns', () => {
+    const probs = Array.from({ length: 64 }, () => mk('.', 0.98, 'p'));
+    probs[4] = mk('k', 0.99, 'q');
+    probs[60] = mk('K', 0.99, 'Q');
+    // a row of black "bishops" on rank 7 that are really pawns
+    for (let c = 0; c < 8; c++) probs[8 + c] = mk('b', 0.6, 'p');
+    const { placement, conf } = decode(probs);
+    expect(placement.slice(8, 16).filter((s) => s === 'b')).toHaveLength(2);
+    expect(placement.slice(8, 16).filter((s) => s === 'p')).toHaveLength(6);
+    expect(conf.filter((c) => c <= 0.5)).toHaveLength(6);
+  });
+  it('keeps confident extra pieces (promotions)', () => {
+    const probs = Array.from({ length: 64 }, () => mk('.', 0.98, 'p'));
+    probs[4] = mk('k', 0.99, 'q');
+    probs[60] = mk('K', 0.99, 'Q');
+    probs[20] = mk('Q', 0.97, 'K');
+    probs[30] = mk('Q', 0.97, 'K');
+    const { placement } = decode(probs);
+    expect(placement.filter((s) => s === 'Q')).toHaveLength(2);
+  });
+});

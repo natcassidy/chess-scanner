@@ -88,7 +88,49 @@ export function decode(probs: Float32Array[]): { placement: PieceClass[]; conf: 
     placement.push(CLASSES[k]);
     conf.push(p[s][k]);
   }
+  applyCountPriors(p, placement, conf);
   return { placement, conf };
+}
+
+/**
+ * Real positions rarely have more than two bishops / knights / rooks, one
+ * queen or eight pawns per side, and never two same-side bishops on the same
+ * square colour without a promotion.  When the reading breaks such a rule,
+ * the least confident offenders (if not very confident) are switched to their
+ * next best class, and stay flagged through their low confidence.
+ */
+const SURE = 0.9;
+function applyCountPriors(p: Float32Array[], placement: PieceClass[], conf: number[]) {
+  const groups: { sym: PieceClass; cap: number; filter?: (s: number) => boolean }[] = [];
+  for (const side of ['w', 'b'] as const) {
+    const c = (x: string) => (side === 'w' ? x.toUpperCase() : x) as PieceClass;
+    groups.push({ sym: c('b'), cap: 1, filter: (s) => ((s >> 3) + s) % 2 === 0 });
+    groups.push({ sym: c('b'), cap: 1, filter: (s) => ((s >> 3) + s) % 2 === 1 });
+    groups.push({ sym: c('n'), cap: 2 }, { sym: c('r'), cap: 2 }, { sym: c('q'), cap: 1 }, { sym: c('p'), cap: 8 });
+  }
+  const count = (sym: PieceClass, filter?: (s: number) => boolean) =>
+    placement.filter((x, s) => x === sym && (!filter || filter(s))).length;
+  for (const g of groups) {
+    const squares = placement
+      .map((x, s) => s)
+      .filter((s) => placement[s] === g.sym && (!g.filter || g.filter(s)))
+      .sort((a, b) => conf[b] - conf[a]);
+    for (const s of squares.slice(g.cap)) {
+      if (conf[s] >= SURE) continue;
+      // best alternative that doesn't break its own cap
+      const order = Array.from(p[s].keys()).sort((a, b) => p[s][b] - p[s][a]);
+      for (const k of order) {
+        const sym = CLASSES[k];
+        if (sym === g.sym || sym === 'K' || sym === 'k') continue;
+        const cap = groups.find((x) => x.sym === sym && (!x.filter || x.filter(s)));
+        if (cap && count(sym, cap.filter) >= cap.cap) continue;
+        if ((sym === 'P' || sym === 'p') && ((s >> 3) === 0 || (s >> 3) === 7)) continue;
+        placement[s] = sym;
+        conf[s] = Math.min(conf[s], 0.5);
+        break;
+      }
+    }
+  }
 }
 
 /**

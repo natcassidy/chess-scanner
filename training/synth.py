@@ -35,6 +35,10 @@ SET_WEIGHTS = {
     'font-habsburg': 4, 'font-kingdom': 3, 'font-leipzig': 6, 'font-lucena': 3, 'font-magnetic': 3,
     'font-marroquin': 3, 'font-maya': 3, 'font-merida': 6, 'font-motif': 3, 'font-smart': 4,
     'font-traveller': 4, 'font-zurich': 4, 'ttf-casefont': 6,
+    # unusual styles: not book-like, but they teach the model what makes a
+    # pawn a pawn across very different drawings
+    'anarcandy': 1, 'fantasy': 1, 'horsey': 1, 'kiwen-suwi': 1, 'pixel': 1, 'rhosgfx': 1, 'xkcd': 1,
+    'firi': 1, 'pirouetti': 1,
 }
 
 
