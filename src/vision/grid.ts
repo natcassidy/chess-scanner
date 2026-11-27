@@ -98,7 +98,7 @@ export function detectGridPyramid(fine: Ctx, coarse: Ctx, w: number, h: number, 
     let cands = latticeCandidates(coarse, coarse.blur.w, coarse.blur.h, opts.minFrac ?? 0.3, opts.maxFrac ?? 0.99)
       .map((q) => ({ quad: q, score: scoreOf(evaluate(coarse, q)) }))
       .sort((a, b) => b.score - a.score)
-      .slice(0, 3)
+      .slice(0, 4)
       .map((c) => refine(coarse, c.quad, Math.max(quadSide(c.quad) / 8 / 4, 0.5), 0.5));
     cands.sort((a, b) => b.score - a.score);
     let cbest = cands[0];
@@ -284,10 +284,16 @@ function fit1D(p: Float32Array, minS: number, maxS: number, top = 3): Fit[] {
 }
 
 function latticeCandidates(ctx: Ctx, w: number, h: number, minFrac: number, maxFrac: number): Quad[] {
+  const a = dominantAngle(ctx);
+  // the dominant angle can be pulled by text lines or a page edge, so also
+  // try nearby rotations
+  return [a, a - 4, a + 4].flatMap((ang) => latticeAt(ctx, w, h, minFrac, maxFrac, ang));
+}
+
+function latticeAt(ctx: Ctx, w: number, h: number, minFrac: number, maxFrac: number, angle: number): Quad[] {
   const n = Math.min(w, h);
   const minS = (n * minFrac) / 8;
   const maxS = (n * maxFrac) / 8;
-  const angle = dominantAngle(ctx);
   const fr = makeFrame(w, h, angle);
   // Alternate between axes, restricting each profile to the band the other
   // axis found, which removes most of the surrounding text.
