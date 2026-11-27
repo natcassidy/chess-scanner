@@ -112,7 +112,7 @@ function applyCountPriors(p: Float32Array[], placement: PieceClass[], conf: numb
     placement.filter((x, s) => x === sym && (!filter || filter(s))).length;
   for (const g of groups) {
     const squares = placement
-      .map((x, s) => s)
+      .map((_x, s) => s)
       .filter((s) => placement[s] === g.sym && (!g.filter || g.filter(s)))
       .sort((a, b) => conf[b] - conf[a]);
     for (const s of squares.slice(g.cap)) {
